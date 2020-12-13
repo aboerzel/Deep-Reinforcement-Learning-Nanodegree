@@ -1,4 +1,5 @@
 import numpy as np
+import random
 from collections import defaultdict
 
 class Agent:
@@ -10,6 +11,9 @@ class Agent:
         ======
         - nA: number of actions available to the agent
         """
+        self.epsilon = 1.0
+        self.alpha = 0.11
+        self.gamma = 1.0
         self.nA = nA
         self.Q = defaultdict(lambda: np.zeros(self.nA))
 
@@ -24,7 +28,12 @@ class Agent:
         =======
         - action: an integer, compatible with the task's action space
         """
-        return np.random.choice(self.nA)
+        if random.random() < self.epsilon:
+            action = np.random.choice(self.nA)
+        else:
+            action = np.argmax(self.Q[state])
+        
+        return action
 
     def step(self, state, action, reward, next_state, done):
         """ Update the agent's knowledge, using the most recently sampled tuple.
@@ -37,4 +46,9 @@ class Agent:
         - next_state: the current state of the environment
         - done: whether the episode is complete (True or False)
         """
-        self.Q[state][action] += 1
+        next_action = np.argmax(self.Q[next_state])
+        self.Q[state][action] += self.alpha*(reward + self.gamma*self.Q[next_state][next_action] - self.Q[state][action])
+        
+        if done:
+            self.epsilon /= 2.0
+  
