@@ -1,13 +1,13 @@
+from collections import OrderedDict
+
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
-from collections import OrderedDict
 
 class QNetwork(nn.Module):
     """Actor (Policy) Model."""
 
-    def __init__(self, state_size, action_size, seed, hidden_layers=[512, 512]):
+    def __init__(self, state_size, action_size, seed, hidden_layers=[64, 64]):
         """Initialize parameters and build model.
         Params
         ======
@@ -23,18 +23,18 @@ class QNetwork(nn.Module):
         layers = OrderedDict()
         
         # Include state_size and action_size as layers
-        hidden_layers = [state_size] + hidden_layers + [action_size]
+        hidden_layers = [state_size] + hidden_layers
         
         # Iterate over the parameters to create layers
-        for idx, (hl_in, hl_out) in enumerate(zip(hidden_layers[:-1],hidden_layers[1:])):
+        for idx, (hl_in, hl_out) in enumerate(zip(hidden_layers[:-1], hidden_layers[1:])):
             # Add a linear layer
             layers['fc'+str(idx)] = nn.Linear(hl_in, hl_out)
             # Add an activation function
             layers['activation'+str(idx)] = nn.ReLU()
-        
-        # Remove the last activation layer
-        layers.popitem()
-        
+
+        # Create the output layer
+        layers['output'] = nn.Linear(hidden_layers[-1], action_size)
+
         # Create the network
         self.network = nn.Sequential(layers)
         
