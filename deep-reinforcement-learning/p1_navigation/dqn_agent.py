@@ -151,7 +151,7 @@ class Agent:
             q_targets.pow_(2)
 
             with torch.no_grad():
-                td_error = q_targets.detach()
+                td_error = q_targets
                 td_error.pow_(0.5)
                 self.memory.update_priorities(td_error)
 

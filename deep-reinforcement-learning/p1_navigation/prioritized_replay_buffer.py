@@ -109,7 +109,7 @@ class PrioritizedReplayBuffer:
         td_error.add_(self.nonzero_probability)
 
         # Update the probabilities in memory
-        self.memory_samples['prob'] = td_error
+        self.memory_samples['prob'] = td_error.cpu().data.numpy()
         self.memory[self.memory_samples_idx] = self.memory_samples
 
         # Update the maximum probability value
