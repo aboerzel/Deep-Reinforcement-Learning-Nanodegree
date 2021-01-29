@@ -1,5 +1,5 @@
 d:
-cd d:\development\rlnd\deep-reinforcement-learning
-call activate drlnd
+cd d:\development\drlnd\deep-reinforcement-learning
+call conda activate drlnd
 call jupyter notebook
 pause
