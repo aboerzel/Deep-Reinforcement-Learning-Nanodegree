@@ -6,7 +6,7 @@ from enum import Enum
 
 
 class Reward(Enum):
-    FORBIDDEN = 0
+    FORBIDDEN = -1
     CONTINUE = 1
     DONE = 100
 

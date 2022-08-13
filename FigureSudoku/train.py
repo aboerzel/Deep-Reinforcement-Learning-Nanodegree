@@ -13,7 +13,7 @@ class DQNAgent:
     def __init__(self, state_size, action_size):
         self.state_size = state_size
         self.action_size = action_size
-        self.memory = deque(maxlen=2000)
+        self.memory = deque(maxlen=10000)
         self.gamma = 0.99  # discount rate
         self.learning_rate = 0.01
         self.model = self._build_model()
@@ -60,27 +60,37 @@ if __name__ == "__main__":
     state_size = env.num_inputs
     action_size = env.num_actions
     agent = DQNAgent(state_size, action_size)
-    agent.load("model4.h5")
-    batch_size = 32
+
+    MODEL_NAME = 'model4.h5'
+
+    agent.load(MODEL_NAME)
+
+    BATCH_SIZE = 32
+    EPSILON = 0.65 # 0.9
+    EPSILON_MIN = 0.01
+    EPSILON_DECAY = 0.9999
+    TARGET_SCORE = 100
+    UPDATE_EVERY = 10
+    MAX_TIMESTEPS = 100
 
     scores_deque = deque(maxlen=100)
     best_avg_score = -99999
     episode = 0
-    epsilon = 1.0
-    epsilon_min = 0.1
-    epsilon_decay = 0.9999
-    TARGET_SCORE = 100
-    UPDATE_EVERY = 10
-    MAX_TIMESTEPS = 100
 
     while True:
         state = env.reset()
         state = np.reshape(state, [1, state_size])
         episode += 1
         episode_reward = 0
-        for timestep in range(1, MAX_TIMESTEPS):
+
+        if EPSILON > EPSILON_MIN:
+            EPSILON *= EPSILON_DECAY
+
+        print(f'Episode {episode:06d}\teps: {EPSILON:.8f}')
+
+        for timestep in range(1, MAX_TIMESTEPS+1):
             # env.render()
-            action = agent.act(state, epsilon)
+            action = agent.act(state, EPSILON)
             next_state, reward, done = env.step(action)
             next_state = np.reshape(next_state, [1, state_size])
             agent.memorize(state, action, reward, next_state, done)
@@ -88,15 +98,14 @@ if __name__ == "__main__":
 
             episode_reward += reward
 
-            print(f'\rEpisode {episode:06d} - Step {timestep:06d}\tEpisode Score: {episode_reward:.2f}', end='')
             if done:
                 # print(f"\nEpisode: {episode:06d}, score: {timestep}, eps: {agent.epsilon:.8f}")
-                print(f'\nEpisode {episode:06d} - Step {timestep:06d}\tEpisode Score: {episode_reward:.2f}\tdone!')
+                print(f'Episode {episode:06d} - Step {timestep:06d}\tEpisode Score: {episode_reward:.2f}\tdone!')
                 break
 
-            if len(agent.memory) > batch_size and (timestep % UPDATE_EVERY == 0):
-                print(f'\nEpisode {episode:06d} - Step {timestep:06d}\tEpisode Score: {episode_reward:.2f}')
-                agent.replay(batch_size)
+            if len(agent.memory) > BATCH_SIZE and (timestep % UPDATE_EVERY == 0) and not done:
+                print(f'Episode {episode:06d} - Step {timestep:06d}\tEpisode Score: {episode_reward:.2f}')
+                agent.replay(BATCH_SIZE)
 
             #if reward != 1:  # if reached terminal state, update game
             #    print(f'\nEpisode {episode:06d} - Step {timestep:06d}\tEpisode Score: {episode_reward:.2f}\tfailed!')
@@ -106,21 +115,18 @@ if __name__ == "__main__":
         scores_deque.append(episode_reward)
         avg_score = np.mean(scores_deque)
 
-        print(f'Episode {episode:06d}\tAvg Score: {avg_score:.2f}\tBest Avg Score: {best_avg_score:.2f}\teps: {epsilon:.8f}')
-
-        if epsilon > epsilon_min:
-            epsilon *= epsilon_decay
+        print(f'Episode {episode:06d}\tAvg Score: {avg_score:.2f}\tBest Avg Score: {best_avg_score:.2f}')
 
         # save best weights
-        if avg_score > best_avg_score and len(agent.memory) > batch_size:
+        if avg_score > best_avg_score and len(agent.memory) > BATCH_SIZE:
             best_avg_score = avg_score
-            agent.save("model4.h5")
+            agent.save(MODEL_NAME)
             print(f'Episode {episode:06d}\tWeights saved!\tBest Avg Score: {best_avg_score:.2f}')
 
         print('\n')
 
         # stop training if target score was reached
         if avg_score >= TARGET_SCORE:
-            agent.save("model4.h5")
+            agent.save(MODEL_NAME)
             print(f'Environment solved in {episode:06d} episodes!\tAverage {len(scores_deque):d}\tScore: {avg_score:.2f}')
             break
