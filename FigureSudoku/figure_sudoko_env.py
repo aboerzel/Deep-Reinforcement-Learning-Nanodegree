@@ -7,7 +7,7 @@ from enum import Enum
 
 class Reward(Enum):
     FORBIDDEN = -1
-    CONTINUE = 1
+    CONTINUE = 0
     DONE = 100
 
 
@@ -29,15 +29,15 @@ class Color(Enum):
 
 class FigureSudokuEnv:
 
-    def __init__(self, rows=len(Geometry)-1, cols=len(Color)-1):
-        self.rows = rows
-        self.cols = cols
+    def __init__(self):
         self.geometries = np.array([Geometry.CIRCLE, Geometry.QUADRAT, Geometry.TRIANGLE, Geometry.HEXAGON])
         self.colors = np.array([Color.RED, Color.GREEN, Color.BLUE, Color.YELLOW])
+        self.rows = len(self.geometries)
+        self.cols = len(self.colors)
         figures = np.array(list(itertools.product(self.geometries, self.colors)))
-        fields = np.array(list(itertools.product(np.arange(rows), np.arange(cols))))
+        fields = np.array(list(itertools.product(np.arange(self.rows), np.arange(self.cols))))
         self.actions = np.array(list(itertools.product(figures, fields)), dtype=object)
-        self.state = np.array([x for x in [[(Geometry.EMPTY.value, Color.EMPTY.value)] * rows] * cols])
+        self.state = np.array([x for x in [[(Geometry.EMPTY.value, Color.EMPTY.value)] * self.rows] * self.cols])
 
         self.num_inputs = len(self.state.flatten())
         self.num_actions = len(self.actions)
@@ -75,11 +75,12 @@ class FigureSudokuEnv:
 
     @staticmethod
     def is_figure_available(state, geometry, color):
-        x = state.reshape(16, 2)
-        return len(np.where(np.logical_and(x[:, 0] == geometry.value, x[:, 1] == color.value))[0]) == 0
+        state = state.reshape(16, 2)
+        return len(np.where(np.logical_and(state[:, 0] == geometry.value, state[:, 1] == color.value))[0]) == 0
 
     @staticmethod
     def is_done(state):
+        state = state.reshape(16, 2)
         return len(np.where(np.logical_or(state[:, 0] == Geometry.EMPTY.value, state[:, 1] == Color.EMPTY.value))[0]) == 0
 
     @staticmethod

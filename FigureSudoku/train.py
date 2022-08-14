@@ -13,17 +13,18 @@ class DQNAgent:
     def __init__(self, state_size, action_size):
         self.state_size = state_size
         self.action_size = action_size
-        self.memory = deque(maxlen=10000)
+        self.memory = deque(maxlen=5000)
         self.gamma = 0.99  # discount rate
         self.learning_rate = 0.01
-        self.model = self._build_model()
+        self.model = self.build_model()
 
-    def _build_model(self):
+    def build_model(self):
         # Neural Net for Deep-Q learning Model
         model = Sequential()
-        model.add(Dense(512, input_dim=self.state_size, activation='relu'))
-        #model.add(Dense(1024, activation='relu'))
+        model.add(Dense(1024, input_dim=self.state_size, activation='relu'))
+        #model.add(Dense(512, activation='relu'))
         model.add(Dense(512, activation='relu'))
+        model.add(Dense(256, activation='relu'))
         model.add(Dense(self.action_size, activation='linear'))
         model.compile(loss='mse', optimizer=Adam(learning_rate=self.learning_rate))
         return model
@@ -61,12 +62,12 @@ if __name__ == "__main__":
     action_size = env.num_actions
     agent = DQNAgent(state_size, action_size)
 
-    MODEL_NAME = 'model4.h5'
+    MODEL_NAME = 'model.h5'
 
     agent.load(MODEL_NAME)
 
     BATCH_SIZE = 32
-    EPSILON = 0.65 # 0.9
+    EPSILON = 0.9  # epoch 1869 eps 0.53918731 model4.h5
     EPSILON_MIN = 0.01
     EPSILON_DECAY = 0.9999
     TARGET_SCORE = 100

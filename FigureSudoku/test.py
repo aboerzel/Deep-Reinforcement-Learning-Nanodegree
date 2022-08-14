@@ -1,35 +1,13 @@
-import pathlib
-import random
 from collections import deque
 
 import numpy as np
-from keras import Input
-from keras.models import Sequential
-from keras.layers.core import Dense
 from figure_sudoko_env import FigureSudokuEnv
+from train import DQNAgent
 
 env = FigureSudokuEnv()
 
-model = Sequential()
-model.add(Input(shape=env.num_inputs))
-model.add(Dense(512, activation='relu'))
-model.add(Dense(env.num_actions, activation='linear'))
-model.compile(loss='mse', optimizer='adam', metrics=['mae'])
-
-MODEL_FILE = 'model2.h5'
-
-
-def save_model_weights():
-    # Save trained weights
-    model.save_weights(MODEL_FILE)
-
-
-def load_model_weights():
-    if pathlib.Path(MODEL_FILE).is_file():
-        model.load_weights(MODEL_FILE)
-
-
-load_model_weights()
+model = DQNAgent(state_size=env.num_inputs, action_size=env.num_actions).build_model()
+model.load_weights('model4.h5')
 
 episodes = 10
 scores_deque = deque(maxlen=100)
@@ -50,7 +28,7 @@ for episode in range(1, episodes):
             print(f'\nEpisode {episode:06d} done!')
             break
 
-        if reward == -10:
+        if reward == -1:
             print(f'\nEpisode {episode:06d} fail!')
             break
 
