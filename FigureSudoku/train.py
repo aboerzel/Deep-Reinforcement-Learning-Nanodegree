@@ -67,7 +67,7 @@ if __name__ == "__main__":
     agent.load(MODEL_NAME)
 
     BATCH_SIZE = 32
-    EPSILON = 0.9  # epoch 1869 eps 0.53918731 model4.h5
+    EPSILON = 1.0  # epoch 1869 eps 0.53918731 model4.h5
     EPSILON_MIN = 0.01
     EPSILON_DECAY = 0.9999
     TARGET_SCORE = 100
