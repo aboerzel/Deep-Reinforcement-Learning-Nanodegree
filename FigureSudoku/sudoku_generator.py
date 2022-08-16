@@ -8,68 +8,73 @@ colors = np.array([Color.RED, Color.GREEN, Color.BLUE, Color.YELLOW])
 rows = len(geometries)
 cols = len(colors)
 
-figures = np.array(list(itertools.product(geometries, colors)))
-fields = np.array(list(itertools.product(np.arange(rows), np.arange(cols))))
+#figures = np.array(list(itertools.product(geometries, colors)))
+#fields = np.array(list(itertools.product(np.arange(rows), np.arange(cols))))
 
-actions = np.array(list(itertools.product(figures, fields)), dtype=object)
-state = np.array([x for x in [[(Geometry.EMPTY.value, Color.EMPTY.value)] * rows] * cols])
+figures = list(itertools.product(geometries, colors))
 
-possibilities = np.array([x for x in [[(geometries, colors)] * rows] * cols])
+#actions = np.array(list(itertools.product(figures, fields)), dtype=object)
+solved = False
 
-# random select first cell, geometry and color
-row = random.randint(0, rows - 1)
-col = random.randint(0, cols - 1)
-geometry = random.choice(geometries)
-color = random.choice(colors)
+n = 4
 
-n = 0
-max = 16
-while True:  # n < max:
+while not solved:
 
-    state[row][col] = np.array([geometry.value, color.value])
-    possibilities[row][col][0] = [Geometry.EMPTY, Geometry.EMPTY, Geometry.EMPTY, Geometry.EMPTY]
-    possibilities[row][col][1] = [Color.EMPTY, Color.EMPTY, Color.EMPTY, Color.EMPTY]
+    state = np.array([x for x in [[(Geometry.EMPTY.value, Color.EMPTY.value)] * rows] * cols])
+    possibilities = [[figures for i in range(cols)] for j in range(rows)]
 
-    for i in range(cols):
-        possibilities[row][i][0][possibilities[row][i][0] == geometry] = Geometry.EMPTY
-        possibilities[row][i][1][possibilities[row][i][1] == color] = Color.EMPTY
+    # random select first cell, geometry and color
+    row = random.randint(0, rows - 1)
+    col = random.randint(0, cols - 1)
+    geometry = random.choice(geometries)
+    color = random.choice(colors)
+    moves = []
 
-    for i in range(rows):
-        possibilities[i][col][0][possibilities[i][col][0] == geometry] = Geometry.EMPTY
-        possibilities[i][col][1][possibilities[i][col][1] == color] = Color.EMPTY
+    while True:
+        state[row][col] = np.array([geometry.value, color.value])
+        possibilities[row][col] = []
 
-    if np.all(possibilities[::, 0] == Geometry.EMPTY):
-        break
+        if len(moves) < n:
+            moves.append((row, col, geometry, color))
 
-    min_lg = len(geometries)
-    min_lc = len(colors)
-    for r in range(rows):
-        for c in range(cols):
-            lg = np.sum(possibilities[r][c][0] != Geometry.EMPTY)
-            if 0 < lg <= min_lg:
-                min_lg = lg
+        for r in range(rows):
+            for c in range(cols):
+                possibilities[r][c] = [item for item in possibilities[r][c] if not (item[0] == geometry and item[1] == color)]
 
-            lc = np.sum(possibilities[r][c][1] != Color.EMPTY)
-            if 0 < lc <= min_lc:
-                min_lc = lc
+        for i in range(cols):
+            possibilities[row][i] = [item for item in possibilities[row][i] if item[0] != geometry and item[1] != color]
 
-    cells = []
-    for r in range(rows):
-        for c in range(cols):
-            if np.sum(possibilities[r][c][0] != Geometry.EMPTY) == min_lg and np.sum(possibilities[r][c][1] != Color.EMPTY) == min_lc:
-                cells.append((r, c))
+        for i in range(rows):
+            possibilities[i][col] = [item for item in possibilities[i][col] if item[0] != geometry and item[1] != color]
 
-    if len(cells) < 1:
-        break
+        min_length = 999
+        for r in range(rows):
+            for c in range(cols):
+                length = len(possibilities[r][c])
+                if 0 < length <= min_length:
+                    min_length = length
 
-    next_cell = random.choice(cells)
-    (row, col) = next_cell
+        cells = []
+        for r in range(rows):
+            for c in range(cols):
+                if len(possibilities[r][c]) == min_length:
+                    cells.append((r, c))
 
-    print(possibilities[row][col][0][(possibilities[row][col][0] != Geometry.EMPTY)])
-    print(possibilities[row][col][1][(possibilities[row][col][1] != Color.EMPTY)])
-    geometry = possibilities[row][col][0][(possibilities[row][col][0] != Geometry.EMPTY)][0]
-    color = possibilities[row][col][1][(possibilities[row][col][1] != Color.EMPTY)][0]
+        if len(cells) < 1:
+            break
 
-    n += 1
+        next_cell = random.choice(cells)
+        (row, col) = next_cell
+
+        next_possibilities = possibilities[row][col]
+        (geometry, color) = random.choice(next_possibilities)
+        #print(geometry, color)
+
+    solved = np.all(state.reshape(16, 2)[:, 0] != Geometry.EMPTY.value) and np.all(state.reshape(16, 2)[:, 1] != Color.EMPTY.value)
+    print(f'solved: {solved}')
 
 print(state)
+print(moves)
+
+
+
