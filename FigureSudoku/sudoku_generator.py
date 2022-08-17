@@ -7,35 +7,26 @@ geometries = np.array([Geometry.CIRCLE, Geometry.QUADRAT, Geometry.TRIANGLE, Geo
 colors = np.array([Color.RED, Color.GREEN, Color.BLUE, Color.YELLOW])
 rows = len(geometries)
 cols = len(colors)
+state_size = rows * cols
 
-#figures = np.array(list(itertools.product(geometries, colors)))
-#fields = np.array(list(itertools.product(np.arange(rows), np.arange(cols))))
+shapes = list(itertools.product(geometries, colors))
 
-figures = list(itertools.product(geometries, colors))
-
-#actions = np.array(list(itertools.product(figures, fields)), dtype=object)
 solved = False
-
-n = 4
 
 while not solved:
 
     state = np.array([x for x in [[(Geometry.EMPTY.value, Color.EMPTY.value)] * rows] * cols])
-    possibilities = [[figures for i in range(cols)] for j in range(rows)]
+    possibilities = [[shapes for i in range(cols)] for j in range(rows)]
 
     # random select first cell, geometry and color
     row = random.randint(0, rows - 1)
     col = random.randint(0, cols - 1)
     geometry = random.choice(geometries)
     color = random.choice(colors)
-    moves = []
 
     while True:
         state[row][col] = np.array([geometry.value, color.value])
         possibilities[row][col] = []
-
-        if len(moves) < n:
-            moves.append((row, col, geometry, color))
 
         for r in range(rows):
             for c in range(cols):
@@ -63,18 +54,22 @@ while not solved:
         if len(cells) < 1:
             break
 
-        next_cell = random.choice(cells)
-        (row, col) = next_cell
-
-        next_possibilities = possibilities[row][col]
-        (geometry, color) = random.choice(next_possibilities)
+        (row, col) = random.choice(cells)
+        possible_shapes = possibilities[row][col]
+        (geometry, color) = random.choice(possible_shapes)
         #print(geometry, color)
 
-    solved = np.all(state.reshape(16, 2)[:, 0] != Geometry.EMPTY.value) and np.all(state.reshape(16, 2)[:, 1] != Color.EMPTY.value)
-    print(f'solved: {solved}')
+    solved = np.all(state.reshape(state_size, 2)[:, 0] != Geometry.EMPTY.value) and np.all(state.reshape(state_size, 2)[:, 1] != Color.EMPTY.value)
+    #print(f'solved: {solved}')
 
+print("final state:")
 print(state)
-print(moves)
+print()
+print("init state:")
+init_state = state.reshape(state_size, 2)
+idx = np.random.choice(range(state_size), 3, replace=False)
+init_state = init_state[idx]
+print(init_state)
 
 
 
