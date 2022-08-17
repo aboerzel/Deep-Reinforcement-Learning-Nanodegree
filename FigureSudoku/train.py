@@ -7,6 +7,7 @@ from keras.layers import Dense
 from keras.optimizer_v2.adam import Adam
 
 from figure_sudoko_env import FigureSudokuEnv
+from shapes import Geometry, Color
 
 
 class DQNAgent:
@@ -40,13 +41,17 @@ class DQNAgent:
 
     def replay(self, batch_size):
         minibatch = random.sample(self.memory, batch_size)
+        x_batch, y_batch = [], []
         for state, action, reward, next_state, done in minibatch:
-            target = reward
-            if not done:
-                target = (reward + self.gamma * np.amax(self.model.predict(next_state)[0]))
-            target_f = self.model.predict(state)
-            target_f[0][action] = target
-            self.model.fit(state, target_f, epochs=1, verbose=0)
+            y_target = self.model.predict(state)
+            y_target[0][action] = (reward + (1-done) * self.gamma * np.amax(self.model.predict(next_state)[0]))
+            x_batch.append(state[0])
+            y_batch.append(y_target[0])
+
+        history = self.model.fit(np.array(x_batch), np.array(y_batch), batch_size=batch_size, verbose=0)
+        # Keeping track of loss
+        loss = history.history['loss'][0]
+        return loss
 
     def load(self, name):
         if pathlib.Path(name).is_file():
@@ -57,7 +62,10 @@ class DQNAgent:
 
 
 if __name__ == "__main__":
-    env = FigureSudokuEnv()
+    geometries = np.array([Geometry.CIRCLE, Geometry.QUADRAT, Geometry.TRIANGLE, Geometry.HEXAGON])
+    colors = np.array([Color.RED, Color.GREEN, Color.BLUE, Color.YELLOW])
+
+    env = FigureSudokuEnv(geometries, colors)
     state_size = env.num_inputs
     action_size = env.num_actions
     agent = DQNAgent(state_size, action_size)
@@ -67,9 +75,9 @@ if __name__ == "__main__":
     agent.load(MODEL_NAME)
 
     BATCH_SIZE = 32
-    EPSILON = 1.0  # epoch 1869 eps 0.53918731 model4.h5
+    EPSILON = 0.9  # epoch 1869 eps 0.53918731 model4.h5
     EPSILON_MIN = 0.01
-    EPSILON_DECAY = 0.9999
+    EPSILON_DECAY = 0.99995
     TARGET_SCORE = 100
     UPDATE_EVERY = 10
     MAX_TIMESTEPS = 100
@@ -106,7 +114,7 @@ if __name__ == "__main__":
 
             if len(agent.memory) > BATCH_SIZE and (timestep % UPDATE_EVERY == 0) and not done:
                 print(f'Episode {episode:06d} - Step {timestep:06d}\tEpisode Score: {episode_reward:.2f}')
-                agent.replay(BATCH_SIZE)
+                loss = agent.replay(BATCH_SIZE)
 
             #if reward != 1:  # if reached terminal state, update game
             #    print(f'\nEpisode {episode:06d} - Step {timestep:06d}\tEpisode Score: {episode_reward:.2f}\tfailed!')

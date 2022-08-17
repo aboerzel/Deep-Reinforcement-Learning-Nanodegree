@@ -1,7 +1,8 @@
 import itertools
 import random
 import numpy as np
-from figure_sudoko_env import Geometry, Color, FigureSudokuEnv
+
+from shapes import Geometry, Color
 
 
 class SudokuGenerator:
@@ -80,8 +81,6 @@ class SudokuGenerator:
         return state, init_state
 
 
-env = FigureSudokuEnv()
-
-generator = SudokuGenerator(env.geometries, env.colors)
-
-print(generator.generate(initial_items=4))
+#env = FigureSudokuEnv()
+#generator = SudokuGenerator(env.geometries, env.colors)
+#print(generator.generate(initial_items=4))

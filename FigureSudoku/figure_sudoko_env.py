@@ -1,8 +1,8 @@
 import itertools
-import random
-
 import numpy as np
 from enum import Enum
+from shapes import Geometry, Color
+from sudoku_generator import SudokuGenerator
 
 
 class Reward(Enum):
@@ -11,27 +11,11 @@ class Reward(Enum):
     DONE = 100
 
 
-class Geometry(Enum):
-    EMPTY = -1
-    CIRCLE = 0
-    QUADRAT = 1
-    TRIANGLE = 2
-    HEXAGON = 3
-
-
-class Color(Enum):
-    EMPTY = -1
-    RED = 0
-    GREEN = 1
-    BLUE = 2
-    YELLOW = 3
-
-
 class FigureSudokuEnv:
 
-    def __init__(self):
-        self.geometries = np.array([Geometry.CIRCLE, Geometry.QUADRAT, Geometry.TRIANGLE, Geometry.HEXAGON])
-        self.colors = np.array([Color.RED, Color.GREEN, Color.BLUE, Color.YELLOW])
+    def __init__(self, geometries, colors):
+        self.geometries = geometries
+        self.colors = colors
         self.rows = len(self.geometries)
         self.cols = len(self.colors)
         figures = np.array(list(itertools.product(self.geometries, self.colors)))
@@ -42,11 +26,10 @@ class FigureSudokuEnv:
         self.num_inputs = len(self.state.flatten())
         self.num_actions = len(self.actions)
 
+        self.generator = SudokuGenerator(geometries, colors)
+
     def reset(self):
-        self.state = np.array([x for x in [[(Geometry.EMPTY.value, Color.EMPTY.value)] * self.rows] * self.cols])
-        row = random.randint(0, self.rows-1)
-        col = random.randint(0, self.cols-1)
-        self.state[row][col] = np.array([random.choice(self.geometries).value, random.choice(self.colors).value])
+        self.state = self.generator.generate(initial_items=4)[1]
         return self.state.flatten()
 
     def step(self, action):
@@ -75,12 +58,12 @@ class FigureSudokuEnv:
 
     @staticmethod
     def is_figure_available(state, geometry, color):
-        state = state.reshape(16, 2)
+        state = state.reshape(state.shape[0] * state.shape[1], 2)
         return len(np.where(np.logical_and(state[:, 0] == geometry.value, state[:, 1] == color.value))[0]) == 0
 
     @staticmethod
     def is_done(state):
-        state = state.reshape(16, 2)
+        state = state.reshape(state.shape[0] * state.shape[1], 2)
         return len(np.where(np.logical_or(state[:, 0] == Geometry.EMPTY.value, state[:, 1] == Color.EMPTY.value))[0]) == 0
 
     @staticmethod
