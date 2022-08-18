@@ -59,11 +59,12 @@ class DQNAgent:
         self.model.save_weights(name)
 
 
-if __name__ == "__main__":
+#if __name__ == "__main__":
+def train_sudoku(gui, stop):
     geometries = np.array([Geometry.CIRCLE, Geometry.QUADRAT, Geometry.TRIANGLE, Geometry.HEXAGON])
     colors = np.array([Color.RED, Color.GREEN, Color.BLUE, Color.YELLOW])
 
-    env = FigureSudokuEnv(geometries, colors)
+    env = FigureSudokuEnv(geometries, colors, gui=gui)
     state_size = env.num_inputs
     action_size = env.num_actions
     agent = DQNAgent(state_size, action_size)
@@ -85,6 +86,9 @@ if __name__ == "__main__":
     episode = 0
 
     while True:
+        if stop():
+            break
+
         state = env.reset()
         state = np.reshape(state, [1, state_size])
         episode += 1

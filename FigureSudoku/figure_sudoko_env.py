@@ -13,9 +13,10 @@ class Reward(Enum):
 
 class FigureSudokuEnv:
 
-    def __init__(self, geometries, colors):
+    def __init__(self, geometries, colors, gui=None):
         self.geometries = geometries
         self.colors = colors
+        self.gui = gui
         self.rows = len(self.geometries)
         self.cols = len(self.colors)
         figures = np.array(list(itertools.product(self.geometries, self.colors)))
@@ -30,6 +31,8 @@ class FigureSudokuEnv:
 
     def reset(self):
         self.state = self.generator.generate(initial_items=4)[1]
+        if self.gui is not None:
+            self.gui.display_state(self.state)
         return self.state.flatten()
 
     def step(self, action):
@@ -50,6 +53,10 @@ class FigureSudokuEnv:
         self.state[row][col] = [geometry.value, color.value]
         done = FigureSudokuEnv.is_done(self.state)
         reward = Reward.DONE.value if done else Reward.CONTINUE.value
+
+        if self.gui is not None:
+            self.gui.display_state(self.state)
+
         return self.state.flatten(), reward, done
 
     @staticmethod
@@ -69,15 +76,15 @@ class FigureSudokuEnv:
     @staticmethod
     def can_move(state, row, col, geometry, color):
         for field in state[row]:
-            if field[0] == geometry:
+            if field[0] == geometry.value:
                 return False
-            if field[1] == color:
+            if field[1] == color.value:
                 return False
 
         for field in np.array(state)[:, col]:
-            if field[0] == geometry:
+            if field[0] == geometry.value:
                 return False
-            if field[1] == color:
+            if field[1] == color.value:
                 return False
 
         return True

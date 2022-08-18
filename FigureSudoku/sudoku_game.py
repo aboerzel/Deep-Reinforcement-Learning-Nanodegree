@@ -1,5 +1,6 @@
 import math
 import random
+from threading import Thread
 from tkinter import Tk, Canvas, Frame, BOTH
 from tkinter import *
 from tkinter.filedialog import askopenfilename
@@ -9,7 +10,11 @@ from PIL import ImageTk
 import tkinter as tk
 from tkinter import ttk
 import numpy as np
+from eventlet.green import thread
+
 from shapes import Geometry, Color
+from train import train_sudoku
+import multiprocessing
 
 
 class GridCell:
@@ -42,10 +47,10 @@ class GridCell:
         print(f'Cell {self.row + 1} {self.col + 1} clicked.')
 
     def set_shape(self, geometry, color):
-        if geometry != Geometry.EMPTY and color != Color.EMPTY:
+        self.clear()
+
+        if geometry != Geometry.EMPTY.value and color != Color.EMPTY.value:
             self.shape = self.get_shape(geometry, color)
-        else:
-            self.clear()
 
     def clear(self):
         if self.shape is not None:
@@ -148,18 +153,18 @@ class GridCell:
     @staticmethod
     def get_color(color):
         return {
-            Color.RED: 'red',
-            Color.GREEN: 'green',
-            Color.YELLOW: 'yellow',
-            Color.BLUE: 'blue'
+            Color.RED.value: 'red',
+            Color.GREEN.value: 'green',
+            Color.YELLOW.value: 'yellow',
+            Color.BLUE.value: 'blue'
         }[color]
 
     def get_shape(self, shape, color):
         return {
-            Geometry.QUADRAT: self.create_quadrat,
-            Geometry.TRIANGLE: self.create_triangle,
-            Geometry.CIRCLE: self.create_circle,
-            Geometry.HEXAGON: self.create_hexagon
+            Geometry.QUADRAT.value: self.create_quadrat,
+            Geometry.TRIANGLE.value: self.create_triangle,
+            Geometry.CIRCLE.value: self.create_circle,
+            Geometry.HEXAGON.value: self.create_hexagon
         }[shape](color=self.get_color(color))
 
 
@@ -186,6 +191,15 @@ class SudokuApp(tk.Tk):
 
         self.create_board()
 
+        self.protocol("WM_DELETE_WINDOW", self.close_window)
+
+        self.stop_train = False
+        self.train_thread = Thread(target=train_sudoku, args=(self, lambda: self.stop_train)).start()
+
+    def close_window(self):
+        self.stop_train = True
+        self.destroy()
+
     def create_board(self):
 
         board = Canvas(self)
@@ -196,7 +210,7 @@ class SudokuApp(tk.Tk):
 
         board.pack(fill=BOTH, expand=1)
 
-    def set_state(self, state):
+    def display_state(self, state):
         for row in range(self.rows):
             for col in range(self. cols):
                 (geometry, color) = state[row][col]
