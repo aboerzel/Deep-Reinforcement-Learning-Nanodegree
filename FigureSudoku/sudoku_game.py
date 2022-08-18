@@ -25,22 +25,32 @@ class GridCell:
         self.y = col * self.height
 
         self.rect = board.create_rectangle(self.y, self.x, self.y + height, self.x + width, outline="black", fill="white")
-        self.shape = None
-
         self.board.tag_bind(self.rect, "<Button-1>", self.clicked)
+
+        self.shape = None
 
     def clicked(self, event):
         if self.shape is None:
             #self.board.itemconfig(self.rect, fill='green', outline='red')
             shape = self.get_random_shape()
             color = self.get_random_color()
-            self.shape = self.get_shape(shape, color)
+            self.set_shape(shape, color)
         else:
             #self.board.itemconfig(self.rect, fill='orange', outline='gray')
-            self.board.delete(self.shape)
-            self.shape = None
+            self.clear()
 
         print(f'Cell {self.row + 1} {self.col + 1} clicked.')
+
+    def set_shape(self, geometry, color):
+        if geometry != Geometry.EMPTY and color != Color.EMPTY:
+            self.shape = self.get_shape(geometry, color)
+        else:
+            self.clear()
+
+    def clear(self):
+        if self.shape is not None:
+            self.board.delete(self.shape)
+            self.shape = None
 
     def create_triangle(self, color='red'):
         r = 15
@@ -153,14 +163,18 @@ class GridCell:
         }[shape](color=self.get_color(color))
 
 
-class App(tk.Tk):
+class SudokuApp(tk.Tk):
     def __init__(self):
         super().__init__()
 
         self.rows = 4
         self.cols = 4
+        self.cell_width = self.cell_height = 80
 
-        self.geometry("320x320")
+        self.width = self.cell_width * self.cols
+        self.height = self.cell_height * self.rows
+
+        self.geometry(f"{self.width}x{self.height}")
         self.title('Figure Sudoku')
         self.resizable(False, False)
 
@@ -176,16 +190,20 @@ class App(tk.Tk):
 
         board = Canvas(self)
 
-        width = height = 80
-
         for row in range(self.rows):
             for col in range(self.cols):
-                self.grid[row][col] = GridCell(board, row, col, width=width, height=height)
+                self.grid[row][col] = GridCell(board, row, col, width=self.cell_width, height=self.cell_height)
 
         board.pack(fill=BOTH, expand=1)
 
+    def set_state(self, state):
+        for row in range(self.rows):
+            for col in range(self. cols):
+                (geometry, color) = state[row][col]
+                self.grid[row][col].set_shape(geometry, color)
+
 
 if __name__ == "__main__":
-    app = App()
+    app = SudokuApp()
     app.mainloop()
 
