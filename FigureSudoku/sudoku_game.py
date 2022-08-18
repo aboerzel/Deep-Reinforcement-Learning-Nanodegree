@@ -9,6 +9,7 @@ from PIL import ImageTk
 import tkinter as tk
 from tkinter import ttk
 import numpy as np
+from shapes import Geometry, Color
 
 
 class GridCell:
@@ -31,7 +32,9 @@ class GridCell:
     def clicked(self, event):
         if self.shape is None:
             #self.board.itemconfig(self.rect, fill='green', outline='red')
-            self.shape = self.get_random_shape(color=self.get_random_color())
+            shape = self.get_random_shape()
+            color = self.get_random_color()
+            self.shape = self.get_shape(shape, color)
         else:
             #self.board.itemconfig(self.rect, fill='orange', outline='gray')
             self.board.delete(self.shape)
@@ -112,26 +115,42 @@ class GridCell:
         self.board.tag_bind(shape, "<Button-1>", self.clicked)
         return shape
 
-    def get_random_shape(self, color):
-        n = random.randint(0, 4)
-        shape = {
-            0: self.create_quadrat,
-            1: self.create_triangle,
-            2: self.create_circle,
-            3: self.create_hexagon
-        }[n](color=color)
-        return shape
+    @staticmethod
+    def get_random_shape():
+        n = random.randint(0, 3)
+        return {
+            0: Geometry.QUADRAT,
+            1: Geometry.TRIANGLE,
+            2: Geometry.CIRCLE,
+            3: Geometry.HEXAGON
+        }[n]
 
     @staticmethod
     def get_random_color():
-        n = random.randint(0, 4)
-        color = {
-            0: 'red',
-            1: 'green',
-            2: 'yellow',
-            3: 'blue'
+        n = random.randint(0, 3)
+        return {
+            0: Color.RED,
+            1: Color.GREEN,
+            2: Color.YELLOW,
+            3: Color.BLUE
         }[n]
-        return color
+
+    @staticmethod
+    def get_color(color):
+        return {
+            Color.RED: 'red',
+            Color.GREEN: 'green',
+            Color.YELLOW: 'yellow',
+            Color.BLUE: 'blue'
+        }[color]
+
+    def get_shape(self, shape, color):
+        return {
+            Geometry.QUADRAT: self.create_quadrat,
+            Geometry.TRIANGLE: self.create_triangle,
+            Geometry.CIRCLE: self.create_circle,
+            Geometry.HEXAGON: self.create_hexagon
+        }[shape](color=self.get_color(color))
 
 
 class App(tk.Tk):
