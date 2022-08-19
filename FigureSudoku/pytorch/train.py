@@ -4,7 +4,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
-from figure_sudoko_env_old import FigureSudokuEnv
+from figure_sudoko_env import FigureSudokuEnv
 
 # output folder for trained weights
 os.makedirs("weights", exist_ok=True)

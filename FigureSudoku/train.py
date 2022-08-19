@@ -22,7 +22,7 @@ class DQNAgent:
     def build_model(self):
         # Neural Net for Deep-Q learning Model
         model = Sequential()
-        model.add(Dense(512, input_dim=self.state_size, activation='relu'))
+        model.add(Dense(1024, input_dim=self.state_size, activation='relu'))
         model.add(Dense(512, activation='relu'))
         model.add(Dense(self.action_size, activation='linear'))
         model.compile(loss='mse', optimizer=Adam(learning_rate=self.learning_rate))
@@ -76,7 +76,7 @@ def train_sudoku(gui, stop):
     BATCH_SIZE = 32
     EPSILON = 1.0
     EPSILON_MIN = 0.01
-    EPSILON_DECAY = 0.9999
+    EPSILON_DECAY = 0.99999
     TARGET_SCORE = 100
     UPDATE_EVERY = 10
     MAX_TIMESTEPS = 100

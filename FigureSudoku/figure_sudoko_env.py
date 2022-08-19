@@ -1,4 +1,5 @@
 import itertools
+import random
 import numpy as np
 from enum import Enum
 from shapes import Geometry, Color
@@ -30,7 +31,17 @@ class FigureSudokuEnv:
         self.generator = SudokuGenerator(geometries, colors)
 
     def reset(self):
-        self.state = self.generator.generate(initial_items=4)[1]
+        # self.state = self.generator.generate(initial_items=4)[1]
+
+        # randomly occupy a cell with a figure
+        self.state = np.array([x for x in [[(Geometry.EMPTY.value, Color.EMPTY.value)] * self.rows] * self.cols])
+        figure, field = random.choice(self.actions)
+        (row, col) = field
+        (geometry, color) = figure
+        self.state[row][col][0] = geometry.value
+        self.state[row][col][1] = color.value
+
+        # update gui
         if self.gui is not None:
             self.gui.display_state(self.state)
         return self.state.flatten()
