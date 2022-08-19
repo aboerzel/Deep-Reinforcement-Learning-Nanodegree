@@ -74,12 +74,12 @@ def train_sudoku(gui, stop):
     agent.load(MODEL_NAME)
 
     BATCH_SIZE = 32
-    EPSILON = 1.0
+    EPSILON = 9.0
     EPSILON_MIN = 0.01
-    EPSILON_DECAY = 0.99999
+    EPSILON_DECAY = 0.9995
     TARGET_SCORE = 100
     UPDATE_EVERY = 10
-    MAX_TIMESTEPS = 100
+    MAX_TIMESTEPS = 250
 
     scores_deque = deque(maxlen=100)
     best_avg_score = -99999
