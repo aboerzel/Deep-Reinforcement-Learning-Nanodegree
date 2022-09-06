@@ -35,6 +35,8 @@ class GridCell:
         self.shape = None
 
     def clicked(self, event):
+        return
+
         if self.shape is None:
             #self.board.itemconfig(self.rect, fill='green', outline='red')
             shape = self.get_random_shape()

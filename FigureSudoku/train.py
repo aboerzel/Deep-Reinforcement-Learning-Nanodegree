@@ -3,7 +3,7 @@ import random
 import numpy as np
 from collections import deque
 from keras.models import Sequential
-from keras.layers import Dense
+from keras.layers import Dense, LeakyReLU
 from keras.optimizer_v2.adam import Adam
 
 from figure_sudoko_env import FigureSudokuEnv
@@ -22,8 +22,9 @@ class DQNAgent:
     def build_model(self):
         # Neural Net for Deep-Q learning Model
         model = Sequential()
-        model.add(Dense(1024, input_dim=self.state_size, activation='relu'))
-        model.add(Dense(512, activation='relu'))
+        model.add(Dense(96, input_dim=self.state_size, activation=LeakyReLU()))
+        model.add(Dense(96, activation=LeakyReLU()))
+        model.add(Dense(96, activation=LeakyReLU()))
         model.add(Dense(self.action_size, activation='linear'))
         model.compile(loss='mse', optimizer=Adam(learning_rate=self.learning_rate))
         return model
@@ -74,28 +75,30 @@ def train_sudoku(gui, stop):
     agent.load(MODEL_NAME)
 
     BATCH_SIZE = 32
-    EPSILON = 9.0
+    EPSILON = 1.0
     EPSILON_MIN = 0.01
-    EPSILON_DECAY = 0.9995
+    EPSILON_DECAY = 0.99
     TARGET_SCORE = 100
     UPDATE_EVERY = 10
     MAX_TIMESTEPS = 250
+    START_LEVEL = 1
+    LEVEL = START_LEVEL
 
-    scores_deque = deque(maxlen=100)
-    best_avg_score = -99999
+    window_size = 100
+    warmup_episodes = window_size * 2
+    scores_deque = deque(maxlen=window_size)
+    avg_score = -99999
+    best_avg_score = avg_score
     episode = 0
 
     while True:
         if stop():
             break
 
-        state = env.reset()
+        state = env.reset(level=LEVEL)
         state = np.reshape(state, [1, state_size])
         episode += 1
         episode_reward = 0
-
-        if EPSILON > EPSILON_MIN:
-            EPSILON *= EPSILON_DECAY
 
         print(f'Episode {episode:06d}\teps: {EPSILON:.8f}')
 
@@ -128,8 +131,13 @@ def train_sudoku(gui, stop):
 
         print(f'Episode {episode:06d}\tAvg Score: {avg_score:.2f}\tBest Avg Score: {best_avg_score:.2f}')
 
+        # update epsilon
+        if episode > warmup_episodes and avg_score > best_avg_score:
+            if EPSILON > EPSILON_MIN:
+                EPSILON *= EPSILON_DECAY
+
         # save best weights
-        if avg_score > best_avg_score and len(agent.memory) > BATCH_SIZE:
+        if episode > warmup_episodes and avg_score > best_avg_score and len(agent.memory) > BATCH_SIZE:
             best_avg_score = avg_score
             agent.save(MODEL_NAME)
             print(f'Episode {episode:06d}\tWeights saved!\tBest Avg Score: {best_avg_score:.2f}')
@@ -137,7 +145,7 @@ def train_sudoku(gui, stop):
         print('\n')
 
         # stop training if target score was reached
-        if avg_score >= TARGET_SCORE:
+        if episode > warmup_episodes and avg_score >= TARGET_SCORE:
             agent.save(MODEL_NAME)
             print(f'Environment solved in {episode:06d} episodes!\tAverage {len(scores_deque):d}\tScore: {avg_score:.2f}')
             break

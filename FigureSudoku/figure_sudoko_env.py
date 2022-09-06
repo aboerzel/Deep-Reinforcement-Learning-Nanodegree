@@ -9,7 +9,7 @@ from sudoku_generator import SudokuGenerator
 class Reward(Enum):
     FORBIDDEN = -1
     CONTINUE = 0
-    DONE = 100
+    DONE = 250
 
 
 class FigureSudokuEnv:
@@ -30,8 +30,9 @@ class FigureSudokuEnv:
 
         self.generator = SudokuGenerator(geometries, colors)
 
-    def reset(self):
-        self.state = self.generator.generate(initial_items=13)[1]
+    def reset(self, level=1):
+        initial_items = (self.rows * self.cols) - level
+        self.state = self.generator.generate(initial_items=initial_items)[1]
 
         # randomly occupy a cell with a figure
         #self.state = np.array([x for x in [[(Geometry.EMPTY.value, Color.EMPTY.value)] * self.rows] * self.cols])
