@@ -19,13 +19,13 @@ class DQNAgent:
         self.learning_rate = 0.01
         self.tau = .125
         self.model = self.build_model()
-        self.target_model = self.build_model()
+        #self.target_model = self.build_model()
 
     def build_model(self):
         # Neural Net for Deep-Q learning Model
         model = Sequential()
         model.add(Dense(64, input_dim=self.state_size, activation="relu"))
-        model.add(Dense(128, activation="relu"))
+        #model.add(Dense(128, activation="relu"))
         model.add(Dense(64, activation="relu"))
         model.add(Dense(self.action_size, activation='linear'))
         model.compile(loss='mse', optimizer=Adam(learning_rate=self.learning_rate))
@@ -70,11 +70,11 @@ class DQNAgent:
     def load(self, name):
         if pathlib.Path(name).is_file():
             self.model.load_weights(name)
-            self.target_model.load_weights("target.h5")
+            #self.target_model.load_weights("target.h5")
 
     def save(self, name):
         self.model.save_weights(name)
-        self.target_model.save_weights("target.h5")
+        #self.target_model.save_weights("target.h5")
 
 
 #if __name__ == "__main__":
@@ -135,20 +135,19 @@ def train_sudoku(gui, stop):
                 print(f'Episode {episode:06d} - Step {timestep:06d}\tEpisode Score: {episode_reward:.2f}\tdone!')
                 break
 
-            if (timestep % UPDATE_EVERY == 0) and not done:
-                print(f'Episode {episode:06d} - Step {timestep:06d}\tEpisode Score: {episode_reward:.2f}')
-                loss = agent.replay(BATCH_SIZE)  # internally iterates default (prediction) model
-                agent.target_train()             # iterates target model
-
-            #if reward != 1:  # if reached terminal state, update game
-            #    print(f'\nEpisode {episode:06d} - Step {timestep:06d}\tEpisode Score: {episode_reward:.2f}\tfailed!')
-            #    break
+        #if (timestep % UPDATE_EVERY == 0) and not done:
+        #print(f'Episode {episode:06d} - Step {timestep:06d}\tEpisode Score: {episode_reward:.2f}')
+        loss = agent.replay(BATCH_SIZE)  # internally iterates default (prediction) model
 
         # average score over the last n epochs
         scores_deque.append(episode_reward)
         avg_score = np.mean(scores_deque)
 
-        print(f'Episode {episode:06d}\tAvg Score: {avg_score:.2f}\tBest Avg Score: {best_avg_score:.2f}')
+        if loss is not None:
+            print(f'Episode {episode:06d}\tAvg Score: {avg_score:.2f}\tBest Avg Score: {best_avg_score:.2f}\tLoss: {loss:.06f}')
+        else:
+            print(
+                f'Episode {episode:06d}\tAvg Score: {avg_score:.2f}\tBest Avg Score: {best_avg_score:.2f}')
 
         # update epsilon
         if episode > warmup_episodes and avg_score > best_avg_score:
