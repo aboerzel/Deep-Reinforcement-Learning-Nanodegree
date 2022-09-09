@@ -20,9 +20,9 @@ class FigureSudokuEnv:
         self.gui = gui
         self.rows = len(self.geometries)
         self.cols = len(self.colors)
-        figures = np.array(list(itertools.product(self.geometries, self.colors)))
+        self.figures = np.array(list(itertools.product(self.geometries, self.colors)))
         fields = np.array(list(itertools.product(np.arange(self.rows), np.arange(self.cols))))
-        self.actions = np.array(list(itertools.product(figures, fields)), dtype=object)
+        self.actions = np.array(list(itertools.product(self.figures, fields)), dtype=object)
         self.state = np.array([x for x in [[(Geometry.EMPTY.value, Color.EMPTY.value)] * self.rows] * self.cols])
 
         self.num_inputs = len(self.state.flatten())
@@ -46,6 +46,31 @@ class FigureSudokuEnv:
         if self.gui is not None:
             self.gui.display_state(self.state)
         return self.state.flatten()
+
+    def get_possible_actions(self, state):
+        state = state.reshape(16, 2)
+
+        # get used figures
+        used_figures = state[np.logical_and(state[:, 0] != Geometry.EMPTY.value, state[:, 1] != Color.EMPTY.value)]
+        used_figures = [[Geometry(f[0]), Color(f[1])] for f in used_figures]
+
+        # get used cells
+        used_cells = [[int(x / self.rows), x % self.cols] for x in np.where(np.logical_and(state[:, 0] == Geometry.EMPTY.value, state[:, 1] == Color.EMPTY.value))]
+
+        possible_actions = self.actions.copy()
+        # filter out used figures
+        possible_actions = [a for a in possible_actions if
+                            len([f for f in used_figures if a[0][0] == f[0] and a[0][1] == f[1]]) == 0]
+        # filter out used cells
+        possible_actions = [a for a in possible_actions if
+                            len([c for c in used_cells if a[1][0] == c[0] and a[1][1] == c[1]]) != 0]
+
+        # get indices
+        possible_actions_ind = np.where([True if len([a for a in possible_actions if
+                                                      a[0][0] == b[0][0] and a[0][1] == b[0][1] and a[1][0] == b[1][0]
+                                                        and a[1][1] == b[1][1]]) > 0 else False for b in self.actions])[0]
+
+        return possible_actions_ind
 
     def step(self, action):
         target_action = self.actions[action]
