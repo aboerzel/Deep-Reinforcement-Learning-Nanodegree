@@ -5,6 +5,7 @@ from collections import deque
 from keras.models import Sequential
 from keras.layers import Dense, LeakyReLU
 from keras.optimizer_v2.adam import Adam
+from keras.optimizer_v2.gradient_descent import SGD
 
 from figure_sudoko_env import FigureSudokuEnv
 from shapes import Geometry, Color
@@ -15,9 +16,10 @@ class DQNAgent:
         self.state_size = state_size
         self.action_size = action_size
         self.memory = deque(maxlen=2000)
-        self.gamma = 0.99  # discount rate
-        self.learning_rate = 0.01
-        self.tau = .125
+        self.gamma = 0.95  # discount rate
+        self.learning_rate = 0.001
+        #self.tau = .125
+        self.decay_rate = 0.001
         self.model = self.build_model()
         #self.target_model = self.build_model()
 
@@ -26,9 +28,10 @@ class DQNAgent:
         model = Sequential()
         model.add(Dense(64, input_dim=self.state_size, activation="relu"))
         #model.add(Dense(128, activation="relu"))
-        model.add(Dense(64, activation="relu"))
-        model.add(Dense(self.action_size, activation='linear'))
-        model.compile(loss='mse', optimizer=Adam(learning_rate=self.learning_rate))
+        model.add(Dense(64, activation="relu", kernel_regularizer='l2'))
+        model.add(Dense(self.action_size, activation='linear', kernel_regularizer='l2'))
+        #model.compile(loss='mse', optimizer=Adam(learning_rate=self.learning_rate, decay=self.decay_rate))
+        model.compile(loss='mse', optimizer=SGD(learning_rate=self.learning_rate))
         return model
 
     def memorize(self, state, action, reward, next_state, done):
@@ -57,15 +60,15 @@ class DQNAgent:
         loss = history.history['loss'][0]
         return loss
 
-    def target_train(self):
+    #def target_train(self):
         # update the the target network with new weights
         #self.target_model.set_weights(self.model.get_weights())
 
-        weights = self.model.get_weights()
-        target_weights = self.target_model.get_weights()
-        for i in range(len(target_weights)):
-            target_weights[i] = weights[i] * self.tau + target_weights[i] * (1 - self.tau)
-        self.target_model.set_weights(target_weights)
+        #weights = self.model.get_weights()
+        #target_weights = self.target_model.get_weights()
+        #for i in range(len(target_weights)):
+        #    target_weights[i] = weights[i] * self.tau + target_weights[i] * (1 - self.tau)
+        #self.target_model.set_weights(target_weights)
 
     def load(self, name):
         if pathlib.Path(name).is_file():
@@ -135,8 +138,9 @@ def train_sudoku(gui, stop):
                 print(f'Episode {episode:06d} - Step {timestep:06d}\tEpisode Score: {episode_reward:.2f}\tdone!')
                 break
 
-        #if (timestep % UPDATE_EVERY == 0) and not done:
-        #print(f'Episode {episode:06d} - Step {timestep:06d}\tEpisode Score: {episode_reward:.2f}')
+            if (timestep % UPDATE_EVERY == 0) and not done:
+                print(f'Episode {episode:06d} - Step {timestep:06d}\tEpisode Score: {episode_reward:.2f}')
+
         loss = agent.replay(BATCH_SIZE)  # internally iterates default (prediction) model
 
         # average score over the last n epochs
