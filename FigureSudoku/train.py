@@ -20,7 +20,7 @@ class DQNAgent:
         self.memory = deque(maxlen=2000)
         self.gamma = 0.95  # discount rate
         self.learning_rate = 0.001
-        self.tau = .08
+        self.tau = .05
         self.decay_rate = 0.001
         self.primary_network = self.build_model()
         self.target_network = self.build_model()
@@ -35,7 +35,8 @@ class DQNAgent:
         model.add(Dense(self.action_size, activation='linear'))
         #model.compile(loss='mse', optimizer=Adam(learning_rate=self.learning_rate, decay=self.decay_rate))
         #model.compile(loss='mse', optimizer=SGD(learning_rate=self.learning_rate))
-        model.compile(loss='mse', optimizer=Adam())
+        #model.compile(loss='mse', optimizer=Adam())
+        model.compile(loss='mse', optimizer=Adam(learning_rate=0.00025, clipnorm=1.0))
         return model
 
     def memorize(self, state, action, reward, next_state, done):
@@ -105,7 +106,7 @@ def train_sudoku(gui, stop):
     writer = SummaryWriter()
 
     BATCH_SIZE = 32
-    EPSILON = 0.9
+    EPSILON = 0.2
     #EPSILON = 0.01
     EPSILON_MIN = 0.01
     EPSILON_DECAY = 0.995
@@ -116,7 +117,7 @@ def train_sudoku(gui, stop):
     LEVEL = START_LEVEL
 
     window_size = 100
-    warmup_episodes = window_size * 2
+    warmup_episodes = 10 # window_size * 2
     scores_deque = deque(maxlen=window_size)
     avg_score = -99999
     best_avg_score = avg_score
