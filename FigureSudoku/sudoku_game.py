@@ -1,20 +1,13 @@
 import math
 import random
 from threading import Thread
-from tkinter import Tk, Canvas, Frame, BOTH
 from tkinter import *
-from tkinter.filedialog import askopenfilename
-from tkinter import simpledialog, messagebox
-from PIL import Image
-from PIL import ImageTk
 import tkinter as tk
-from tkinter import ttk
 import numpy as np
-from eventlet.green import thread
 
 from shapes import Geometry, Color
-from train import train_sudoku
-import multiprocessing
+#from train import train_sudoku
+from pytorch.train import train_sudoku
 
 
 class GridCell:

@@ -1,5 +1,4 @@
 import itertools
-import random
 import numpy as np
 from enum import Enum
 from shapes import Geometry, Color
@@ -7,9 +6,9 @@ from sudoku_generator import SudokuGenerator
 
 
 class Reward(Enum):
-    FORBIDDEN = -1
-    CONTINUE = 0
-    DONE = 250
+    FORBIDDEN = -10
+    CONTINUE = -1
+    DONE = 10
 
 
 class FigureSudokuEnv:
@@ -78,6 +77,8 @@ class FigureSudokuEnv:
         (geometry, color) = target_action[0]
         (row, col) = target_action[1]
 
+        temp_state = [geometry.value, color.value]
+
         if not FigureSudokuEnv.is_figure_available(self.state, geometry, color):
             return self.state.flatten(), Reward.FORBIDDEN.value, False
 
@@ -87,7 +88,7 @@ class FigureSudokuEnv:
         if not FigureSudokuEnv.can_move(self.state, row, col, geometry, color):
             return self.state.flatten(), Reward.FORBIDDEN.value, False
 
-        self.state[row][col] = [geometry.value, color.value]
+        self.state[row][col] = temp_state
         done = FigureSudokuEnv.is_done(self.state)
         reward = Reward.DONE.value if done else Reward.CONTINUE.value
 

@@ -3,9 +3,8 @@ import random
 import numpy as np
 from collections import deque
 from keras.models import Sequential
-from keras.layers import Dense, LeakyReLU
+from keras.layers import Dense
 from keras.optimizer_v2.adam import Adam
-from keras.optimizer_v2.gradient_descent import SGD
 from keras.regularizers import l2
 
 from figure_sudoko_env import FigureSudokuEnv
@@ -35,8 +34,8 @@ class DQNAgent:
         model.add(Dense(self.action_size, activation='linear'))
         #model.compile(loss='mse', optimizer=Adam(learning_rate=self.learning_rate, decay=self.decay_rate))
         #model.compile(loss='mse', optimizer=SGD(learning_rate=self.learning_rate))
-        #model.compile(loss='mse', optimizer=Adam())
-        model.compile(loss='mse', optimizer=Adam(learning_rate=0.00025, clipnorm=1.0))
+        model.compile(loss='mse', optimizer=Adam())
+        #model.compile(loss='mse', optimizer=Adam(learning_rate=0.00025, clipnorm=1.0))
         return model
 
     def memorize(self, state, action, reward, next_state, done):
@@ -44,7 +43,8 @@ class DQNAgent:
 
     def act(self, state, possible_actions, epsilon):
         if np.random.rand() <= epsilon:
-            return random.choice(possible_actions)
+            #return random.choice(possible_actions)
+            return random.randrange(self.action_size)
         act_values = self.primary_network.predict(state)
         return np.argmax(act_values[0])  # returns action
 
@@ -106,8 +106,7 @@ def train_sudoku(gui, stop):
     writer = SummaryWriter()
 
     BATCH_SIZE = 32
-    EPSILON = 0.2
-    #EPSILON = 0.01
+    EPSILON = 0.9
     EPSILON_MIN = 0.01
     EPSILON_DECAY = 0.995
     TARGET_SCORE = 249
@@ -117,7 +116,7 @@ def train_sudoku(gui, stop):
     LEVEL = START_LEVEL
 
     window_size = 100
-    warmup_episodes = 10 # window_size * 2
+    warmup_episodes = 10  # window_size * 2
     scores_deque = deque(maxlen=window_size)
     avg_score = -99999
     best_avg_score = avg_score
@@ -130,15 +129,12 @@ def train_sudoku(gui, stop):
         state = env.reset(level=LEVEL)
         state = np.reshape(state, [1, state_size])
         episode += 1
-        episode_reward = 0
+        episode_score = 0
         avg_loss = 0
-        timestep = 0
 
         print(f'Episode {episode:06d}\teps: {EPSILON:.8f}')
 
-        #for timestep in range(1, MAX_TIMESTEPS+1):
-        while True:
-            timestep += 1
+        for timestep in range(1, MAX_TIMESTEPS+1):
             possible_actions = env.get_possible_actions(state)
             action = agent.act(state, possible_actions, EPSILON)
             next_state, reward, done = env.step(action)
@@ -151,40 +147,39 @@ def train_sudoku(gui, stop):
             if loss is not None:
                 avg_loss += loss
 
-            episode_reward += reward
+            episode_score += reward
 
             if done:
                 avg_loss /= timestep
                 # print(f"\nEpisode: {episode:06d}, score: {timestep}, eps: {agent.epsilon:.8f}")
-                writer.add_scalar("reward", episode_reward, episode)
+                writer.add_scalar("score", episode_score, episode)
                 if loss is not None:
                     writer.add_scalar("loss", loss, episode)
                     writer.add_scalar("avg loss", avg_loss, episode)
-                print(f'Episode {episode:06d} - Step {timestep:06d}\tEpisode Score: {episode_reward:.2f}\tdone!')
+                print(f'Episode {episode:06d} - Step {timestep:06d}\tEpisode Score: {episode_score:.2f}\tdone!')
                 break
 
             if timestep % UPDATE_EVERY == 0:
-                print(f'Episode {episode:06d} - Step {timestep:06d}\tEpisode Score: {episode_reward:.2f}')
+                print(f'Episode {episode:06d} - Step {timestep:06d}\tEpisode Score: {episode_score:.2f}')
 
 
 
         # average score over the last n epochs
-        scores_deque.append(episode_reward)
+        scores_deque.append(episode_score)
         avg_score = np.mean(scores_deque)
 
-        writer.add_scalar("avg reward", avg_score, episode)
+        writer.add_scalar("avg score", avg_score, episode)
         writer.add_scalar("epsilon", EPSILON, episode)
 
         if loss is not None:
             print(f'Episode {episode:06d}\tAvg Score: {avg_score:.2f}\tBest Avg Score: {best_avg_score:.2f}\tLoss: {loss:.06f}\tAvg Loss: {avg_loss:.5f}')
         else:
-            print(
-                f'Episode {episode:06d}\tAvg Score: {avg_score:.2f}\tBest Avg Score: {best_avg_score:.2f}')
+            print(f'Episode {episode:06d}\tAvg Score: {avg_score:.2f}\tBest Avg Score: {best_avg_score:.2f}')
 
         # update epsilon
-        if episode > warmup_episodes and avg_score > best_avg_score:
-            if EPSILON > EPSILON_MIN:
-                EPSILON *= EPSILON_DECAY
+        #if episode > warmup_episodes and avg_score > best_avg_score:
+        if EPSILON > EPSILON_MIN:
+            EPSILON *= EPSILON_DECAY
 
         # save best weights
         if episode > warmup_episodes and EPSILON < 0.1 and avg_score > best_avg_score and len(agent.memory) > BATCH_SIZE:

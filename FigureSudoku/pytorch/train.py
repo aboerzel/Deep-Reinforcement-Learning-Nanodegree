@@ -1,127 +1,91 @@
 from collections import deque
-from dqn_agent import Agent
-import os
 import numpy as np
-import matplotlib.pyplot as plt
-
+import torch
+from torch.utils.tensorboard import SummaryWriter
 from figure_sudoko_env import FigureSudokuEnv
+from pytorch.dqn_agent import Agent
+from shapes import Geometry, Color
 
-# output folder for trained weights
-os.makedirs("weights", exist_ok=True)
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+print("GPU available: " + str(torch.cuda.is_available()))
 
-env = FigureSudokuEnv()
-# number of actions
-action_size = env.num_inputs
-print('Number of actions:', action_size)
-
-# examine the state space
-state_size = env.num_actions
-print('States have length:', state_size)
 
 TARGET_SCORE = 10.0
 
 
-def dqn(agent, n_episodes=2000, max_t=1000, eps_start=1.0, eps_end=0.01, eps_decay=0.995):
-    """Deep Q-Learning.
+def train_sudoku(gui, stop):
+    # create environment
+    geometries = np.array([Geometry.CIRCLE, Geometry.QUADRAT, Geometry.TRIANGLE, Geometry.HEXAGON])
+    colors = np.array([Color.RED, Color.GREEN, Color.BLUE, Color.YELLOW])
+    env = FigureSudokuEnv(geometries, colors, gui=gui)
+    state_size = env.num_inputs
+    action_size = env.num_actions
 
-    Params
-    ======
-        n_episodes (int): maximum number of training episodes
-        max_t (int): maximum number of timesteps per episode
-        eps_start (float): starting value of epsilon, for epsilon-greedy action selection
-        eps_end (float): minimum value of epsilon
-        eps_decay (float): multiplicative factor (per episode) for decreasing epsilon
-    """
-    scores = []  # list containing scores from each episode
-    mean_scores = []  # list the mean of the window scores
-    scores_window = deque(maxlen=100)  # last 100 scores
-    eps = eps_start  # initialize epsilon
+    agent = Agent(device=device, state_size=state_size, action_size=action_size, seed=0, double_dqn=False, dueling_network=True, prioritized_replay=True)
 
-    for i_episode in range(1, n_episodes + 1):
-        state = env.reset()  # reset the environment
-        score = 0
-        for t in range(max_t):
-            action = agent.act(state, eps)
-            state = env.step(action)  # send the action to the environment
-            next_state, reward, done = state  # get the next state
-            agent.step(state, action, reward, next_state, done)
-            state = next_state
-            score += reward
-            if done:
-                break
-
-        scores.append(score)  # save most recent score
-        scores_window.append(score)  # save most recent score
-        mean_score = np.mean(scores_window)  # mean score
-        mean_scores.append(mean_score)  # save mean score
-
-        eps = max(eps_end, eps_decay * eps)  # decrease epsilon
-
-        print('\rEpisode {}\tAverage Score: {:.2f}'.format(i_episode, mean_score), end="")
-
-        if i_episode % 100 == 0:
-            print('\rEpisode {}\tAverage Score: {:.2f}'.format(i_episode, mean_score))
-
-        if mean_score >= TARGET_SCORE:
-            print('\nEnvironment solved in {:d} episodes!\tAverage Score: {:.2f}'.format(i_episode, mean_score))
-            break
-
-    return scores, mean_scores
-
-
-def train(agent, weights_file):
-    scores, means = dqn(agent, n_episodes=100000, max_t=50, eps_start=0.10, eps_end=0.01, eps_decay=0.98)
-    agent.save(weights_file)
-
-    # plot the scores
-    fig = plt.figure(figsize=(20,10))
-    ax = fig.add_subplot(111)
-    plt.plot(np.arange(len(scores)), scores)
-    plt.plot(np.arange(len(means)), means, linestyle='--')
-    plt.ylabel('Score')
-    plt.xlabel('Episode #')
-    plt.legend(('Score', 'Mean'), fontsize='xx-large')
-    plt.show()
-
-
-def evaluate(env, agent, episodes, weights_file):
-    # load trained weights from file
+    weights_file = 'weights/checkpoint.pth'
     agent.load(weights_file)
 
-    scores = []  # list containing scores from each episode
+    # hyperparameter
+    max_episodes = 1000000
+    max_timesteps = 250
+    eps_start = 0.8
+    eps_end = 0.01
+    eps_decay = 0.999995
+    start_level = 2
 
-    for i_episode in range(1, episodes + 1):
-        state = env.reset()  # reset the environment
-        score = 0
-        while True:
-            action = agent.act(state)  # get the next action
-            next_state, reward, done = env.step(action)  # send the action to the environment
-            score += reward
+    # score parameter
+    window_size = 100
+    warmup_episodes = 2 * window_size
+    scores_deque = deque(maxlen=window_size)
+    avg_score = -99999
+    best_avg_score = avg_score
+
+    eps = eps_start  # initialize epsilon
+    level = start_level
+
+    writer = SummaryWriter()
+
+    for episode in range(1, max_episodes + 1):
+        if stop():
+            break
+
+        state = env.reset(level=level)  # reset the environment
+        episode_score = 0
+        for timestep in range(1, max_timesteps + 1):
+            #possible_actions = env.get_possible_actions(state)
+            action = agent.act(state, eps)
+            next_state, reward, done = env.step(action)
+            agent.step(state, action, reward, next_state, done)
             state = next_state
-            print('\rEpisode {}\tScore: {:.2f}'.format(i_episode, score), end="")
+            episode_score += reward
             if done:
+                # print(f'Episode {episode:06d} - Step {timestep:06d}\tEpisode Score: {episode_score:.2f}\tdone!')
                 break
 
-        scores.append(score)  # save most recent score
+        # average score over the last n epochs
+        scores_deque.append(episode_score)
+        avg_score = np.mean(scores_deque)
 
-        print('\rEpisode {}\tScore: {:.2f}'.format(i_episode, scores[-1]))
+        writer.add_scalar("episode score", episode_score, episode)
+        writer.add_scalar("avg score", avg_score, episode)
+        writer.add_scalar("epsilon", eps, episode)
 
-    mean_score = np.mean(scores)
-    print('\nAverage Score over {} episodes: {:.2f}!'.format(episodes, mean_score))
+        if episode % 100 == 0:
+            print(f'\rEpisode {episode:08d}\tAverage Score: {avg_score:.2f}\tEpsilon: {eps:.8f}')
 
-    # plot the scores
-    fig = plt.figure(figsize=(20, 10))
-    ax = fig.add_subplot(111)
-    plt.plot(np.arange(len(scores)), scores)
-    plt.plot(np.arange(len(scores)), [np.mean(scores)] * len(scores), linestyle='--')
-    plt.ylabel('Score')
-    plt.xlabel('Episode #')
-    plt.legend(('Score', 'Mean'), fontsize='xx-large')
-    plt.show()
+        # print(f'Episode {episode:06d}\tAvg Score: {avg_score:.2f}\tBest Avg Score: {best_avg_score:.2f}')
 
+        #eps = max(eps_end, eps_decay * eps)  # decrease epsilon
 
-agent = Agent(state_size=state_size, action_size=action_size, seed=0, double_dqn=False, dueling_network=False, prioritized_replay=False)
+        # save best weights
+        if episode > warmup_episodes and avg_score > best_avg_score:
+            best_avg_score = avg_score
+            agent.save(weights_file)
+            print(f'Episode {episode:08d}\tWeights saved!\tBest Avg Score: {best_avg_score:.2f}')
 
-weights_file = 'weights/checkpoint.pth'
-train(agent, weights_file)
-
+        # stop training if target score was reached
+        if episode > warmup_episodes and avg_score >= TARGET_SCORE:
+            agent.save(weights_file)
+            print(f'\nEnvironment solved in {episode} episodes!\tAverage Score: {avg_score:.2f}')
+            break

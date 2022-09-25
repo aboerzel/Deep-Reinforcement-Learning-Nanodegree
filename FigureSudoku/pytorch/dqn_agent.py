@@ -4,11 +4,14 @@ import random
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
+from torch.nn import MSELoss
 
-from model import QNetwork
-from dueling_model import DuelingQNetwork
-from replay_buffer import ReplayBuffer
-from prioritized_replay_buffer import PrioritizedReplayBuffer
+from pytorch.dueling_model import DuelingQNetwork
+from pytorch.model import QNetwork
+from pytorch.prioritized_replay_buffer import PrioritizedReplayBuffer
+from pytorch.radam import RAdam
+from pytorch.replay_buffer import ReplayBuffer
+
 
 BUFFER_SIZE = int(1e5)  # replay buffer size
 BATCH_SIZE = 64         # batch size
@@ -18,13 +21,11 @@ LR = 5e-4               # learning rate
 LR_DECAY = 0.9999       # multiplicative factor of learning rate decay
 UPDATE_EVERY = 4        # how often to update the network
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
 
 class Agent:
     """Interacts with and learns from the environment."""
 
-    def __init__(self, state_size, action_size, seed, double_dqn=False, dueling_network=False, prioritized_replay=False):
+    def __init__(self, device, state_size, action_size, seed, double_dqn=False, dueling_network=False, prioritized_replay=False):
         """Initialize an Agent object.
         
         Params
@@ -36,6 +37,7 @@ class Agent:
             dueling_network (bool): use Dueling Network
             prioritized_replay (bool): use Prioritized Replay Buffer
         """
+        self.device = device
         self.state_size = state_size
         self.action_size = action_size
         self.dueling_network = dueling_network
@@ -44,30 +46,30 @@ class Agent:
 
         random.seed(seed)
 
-        print("Running on: " + str(torch.cuda.is_available()))
-
         # Q-Network
-        self.hidden_layers = [1024, 512]
+        self.hidden_layers = [64, 64]
 
         if self.dueling_network:
-            self.hidden_state_value_layers = [1024, 512]
+            self.hidden_state_value_layers = [64, 64]
 
-            self.qnetwork_local = DuelingQNetwork(state_size, action_size, seed, self.hidden_layers, self.hidden_state_value_layers).to(device)
-            self.qnetwork_target = DuelingQNetwork(state_size, action_size, seed, self.hidden_layers, self.hidden_state_value_layers).to(device)
+            self.qnetwork_local = DuelingQNetwork(state_size, action_size, seed, self.hidden_layers, self.hidden_state_value_layers).to(self.device)
+            self.qnetwork_target = DuelingQNetwork(state_size, action_size, seed, self.hidden_layers, self.hidden_state_value_layers).to(self.device)
             self.qnetwork_target.eval()
         else:
-            self.qnetwork_local = QNetwork(state_size, action_size, seed, self.hidden_layers).to(device)
-            self.qnetwork_target = QNetwork(state_size, action_size, seed, self.hidden_layers).to(device)
+            self.qnetwork_local = QNetwork(state_size, action_size, seed).to(self.device)
+            self.qnetwork_target = QNetwork(state_size, action_size, seed).to(self.device)
             self.qnetwork_target.eval()
 
         self.optimizer = optim.Adam(self.qnetwork_local.parameters(), lr=LR)
-        self.lr_scheduler = optim.lr_scheduler.ExponentialLR(self.optimizer, LR_DECAY)
+        #self.optimizer = RAdam(self.qnetwork_local.parameters(), lr=LR)
+
+        #self.lr_scheduler = optim.lr_scheduler.ExponentialLR(self.optimizer, LR_DECAY)
 
         # Replay memory
         if prioritized_replay:
-            self.memory = PrioritizedReplayBuffer(action_size, BUFFER_SIZE, BATCH_SIZE, seed, device, alpha=0.6, beta=0.4, beta_scheduler=1.0)
+            self.memory = PrioritizedReplayBuffer(action_size, BUFFER_SIZE, BATCH_SIZE, seed, self.device, alpha=0.6, beta=0.4, beta_scheduler=1.0)
         else:
-            self.memory = ReplayBuffer(action_size, BUFFER_SIZE, BATCH_SIZE, seed, device)
+            self.memory = ReplayBuffer(action_size, BUFFER_SIZE, BATCH_SIZE, seed, self.device)
 
         # Initialize time step (for updating every UPDATE_EVERY steps)
         self.t_step = 0
@@ -102,20 +104,18 @@ class Agent:
             state (array_like): current state
             eps (float): epsilon, for epsilon-greedy action selection
         """
+
+        state = torch.from_numpy(state).float().to(self.device)
+        self.qnetwork_local.eval()
+        with torch.no_grad():
+            action_values = self.qnetwork_local(state)
+        self.qnetwork_local.train()
+
         # Epsilon-greedy action selection
-        if random.random() >= eps:
-            #state = torch.from_numpy(state).float().unsqueeze(0).to(device)
-            state = torch.from_numpy(state).float().to(device)
-
-            self.qnetwork_local.eval()
-            with torch.no_grad():
-                #action_values = self.qnetwork_local(state).cpu()
-                action_values = self.qnetwork_local(state)
-            self.qnetwork_local.train()
-
-            return np.argmax(action_values.cpu().data.numpy()).astype(int)
-
+        if random.random() > eps:
+            return np.argmax(action_values.cpu().data.numpy()) #.astype(int)
         else:
+            #return random.choice(possible_actions)
             return random.choice(np.arange(self.action_size))
 
     def learn(self, experiences, gamma):
@@ -127,6 +127,9 @@ class Agent:
             gamma (float): discount factor
         """
         states, actions, rewards, next_states, dones, w = experiences
+
+        # Local model is one which we need to train, so it's in training mode
+        self.qnetwork_local.train()
 
         with torch.no_grad():
             # Use of Double DQN method
@@ -162,13 +165,15 @@ class Agent:
             q_targets.mul_(w)
             loss = q_targets.mean()
         else:
-            loss = F.mse_loss(q_expected, q_targets)
+            criterion = torch.nn.MSELoss()
+            loss = criterion(q_expected, q_targets).to(self.device)
+            #loss = F.mse_loss(q_expected, q_targets)
 
         # Minimize the loss
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
-        self.lr_scheduler.step()
+        #self.lr_scheduler.step()
 
         # ------------------- update target network ------------------- #
         self.soft_update(self.qnetwork_local, self.qnetwork_target, TAU)
