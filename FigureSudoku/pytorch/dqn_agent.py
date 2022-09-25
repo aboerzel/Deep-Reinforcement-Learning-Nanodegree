@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import random
 
@@ -75,6 +77,10 @@ class Agent:
         self.t_step = 0
 
     def load(self, filepath):
+
+        if not os.path.isfile(filepath):
+            return
+
         # load weights from file  
         state_dict = torch.load(filepath)
         self.qnetwork_local.load_state_dict(state_dict)
@@ -96,7 +102,7 @@ class Agent:
                 experiences = self.memory.sample()
                 self.learn(experiences, GAMMA)
 
-    def act(self, state, eps=0.):
+    def act(self, state, possible_actions, eps=0.):
         """Returns actions for given state as per current policy.
         
         Params
@@ -115,8 +121,8 @@ class Agent:
         if random.random() > eps:
             return np.argmax(action_values.cpu().data.numpy()) #.astype(int)
         else:
-            #return random.choice(possible_actions)
-            return random.choice(np.arange(self.action_size))
+            return random.choice(possible_actions)
+            #return random.choice(np.arange(self.action_size))
 
     def learn(self, experiences, gamma):
         """Update value parameters using given batch of experience tuples.

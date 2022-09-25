@@ -29,10 +29,10 @@ def train_sudoku(gui, stop):
     # hyperparameter
     max_episodes = 1000000
     max_timesteps = 250
-    eps_start = 0.8
+    eps_start = 0.7
     eps_end = 0.01
     eps_decay = 0.999995
-    start_level = 2
+    start_level = 3
 
     # score parameter
     window_size = 100
@@ -53,8 +53,8 @@ def train_sudoku(gui, stop):
         state = env.reset(level=level)  # reset the environment
         episode_score = 0
         for timestep in range(1, max_timesteps + 1):
-            #possible_actions = env.get_possible_actions(state)
-            action = agent.act(state, eps)
+            possible_actions = env.get_possible_actions(state)
+            action = agent.act(state, possible_actions, eps)
             next_state, reward, done = env.step(action)
             agent.step(state, action, reward, next_state, done)
             state = next_state
