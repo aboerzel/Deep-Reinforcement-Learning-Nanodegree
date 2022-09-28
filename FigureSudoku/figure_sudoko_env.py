@@ -54,7 +54,13 @@ class FigureSudokuEnv:
         used_figures = [[Geometry(f[0]), Color(f[1])] for f in used_figures]
 
         # get used cells
-        used_cells = [[int(x / self.rows), x % self.cols] for x in np.where(np.logical_and(state[:, 0] == Geometry.EMPTY.value, state[:, 1] == Color.EMPTY.value))]
+        test = np.array([a for a in np.where(np.logical_and(state[:, 0] == Geometry.EMPTY.value, state[:, 1] == Color.EMPTY.value))]).squeeze(axis=0)
+
+        used_cells = []
+        for x in test:
+            row = int(x / self.rows)
+            col = x % self.cols
+            used_cells.append([row, col])
 
         possible_actions = self.actions.copy()
         # filter out used figures
