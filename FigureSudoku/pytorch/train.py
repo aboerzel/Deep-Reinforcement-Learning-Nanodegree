@@ -21,13 +21,14 @@ def train_sudoku(gui, stop):
     state_size = env.num_inputs
     action_size = env.num_actions
 
-    agent = Agent(device=device, state_size=state_size, action_size=action_size, seed=0, double_dqn=False, dueling_network=True, prioritized_replay=True)
+    agent = Agent(device=device, state_size=state_size, action_size=action_size, seed=0, double_dqn=True, dueling_network=True, prioritized_replay=False)
 
     weights_file = 'weights/checkpoint.pth'
     agent.load(weights_file)
 
     # hyperparameter
-    max_episodes = 1000000
+    start_episode = 1
+    max_episodes = 9000000
     max_timesteps = 250
     eps_start = 0.7
     eps_end = 0.01
@@ -36,7 +37,7 @@ def train_sudoku(gui, stop):
 
     # score parameter
     window_size = 100
-    warmup_episodes = 2 * window_size
+    warmup_episodes = start_episode + 2 * window_size
     scores_deque = deque(maxlen=window_size)
     avg_score = -99999
     best_avg_score = avg_score
@@ -46,7 +47,7 @@ def train_sudoku(gui, stop):
 
     writer = SummaryWriter()
 
-    for episode in range(1, max_episodes + 1):
+    for episode in range(start_episode, max_episodes + 1):
         if stop():
             break
 
@@ -89,3 +90,6 @@ def train_sudoku(gui, stop):
             agent.save(weights_file)
             print(f'\nEnvironment solved in {episode} episodes!\tAverage Score: {avg_score:.2f}')
             break
+
+    agent.save(weights_file)
+    print(f'Episode {episode:08d}\tWeights saved!\tBest Avg Score: {best_avg_score:.2f}')

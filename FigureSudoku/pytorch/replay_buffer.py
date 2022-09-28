@@ -7,7 +7,7 @@ from collections import namedtuple, deque
 class ReplayBuffer:
     """Fixed-size buffer to store experience tuples."""
 
-    def __init__(self, action_size, buffer_size, batch_size, seed, device):
+    def __init__(self, action_size, buffer_size, seed, device):
         """Initialize a ReplayBuffer object.
 
         Params
@@ -19,7 +19,6 @@ class ReplayBuffer:
         """
         self.action_size = action_size
         self.memory = deque(maxlen=buffer_size)
-        self.batch_size = batch_size
         self.experience = namedtuple("Experience", field_names=["state", "action", "reward", "next_state", "done"])
         self.device = device
 
@@ -30,9 +29,9 @@ class ReplayBuffer:
         e = self.experience(state, action, reward, next_state, done)
         self.memory.append(e)
 
-    def sample(self):
+    def sample(self, batch_size):
         """Randomly sample a batch of experiences from memory."""
-        experiences = random.sample(self.memory, k=self.batch_size)
+        experiences = random.sample(self.memory, k=batch_size)
 
         states = torch.from_numpy(np.vstack([e.state for e in experiences if e is not None])).float().to(self.device)
         actions = torch.from_numpy(np.vstack([e.action for e in experiences if e is not None])).long().to(self.device)

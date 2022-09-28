@@ -5,7 +5,7 @@ import torch
 class PrioritizedReplayBuffer:
     """Fixed-size prioritized buffer to store experience tuples."""
 
-    def __init__(self, action_size, buffer_size, batch_size, seed, device, alpha=0., beta=1., beta_scheduler=1.):
+    def __init__(self, action_size, buffer_size, seed, device, alpha=0., beta=1., beta_scheduler=1.):
         """Initialize a PrioritizedReplayBuffer object.
 
         Params
@@ -20,7 +20,6 @@ class PrioritizedReplayBuffer:
         """
         self.action_size = action_size
         self.buffer_size = buffer_size
-        self.batch_size = batch_size
         self.device = device
         self.alpha = alpha
         self.beta = beta
@@ -36,14 +35,6 @@ class PrioritizedReplayBuffer:
             ('prob', np.double)])
         # Variable to control the memory buffer as being a circular list
         self.memory_idx_ctrl = 0
-
-        # Variable to control the selected samples
-        self.memory_samples_idx = np.empty(batch_size)
-        # Numpy Array to store selected samples
-        # Those samples could be controlled only by the index,
-        # however keeping an allocated space in memory improves performance.
-        # (Here we have a tradeoff between memory space and computacional processing)
-        self.memory_samples = np.empty(batch_size, dtype=type(self.memory))
 
         # Each new experience is added to the memory with
         # the maximum probability of being choosen
@@ -73,13 +64,21 @@ class PrioritizedReplayBuffer:
         # Control memory as a circular list
         self.memory_idx_ctrl = (self.memory_idx_ctrl + 1) % self.buffer_size
 
-    def sample(self):
+    def sample(self, batch_size):
         """Sample a batch of prioritized experiences from memory."""
+        # Variable to control the selected samples
+        #self.memory_samples_idx = np.empty(batch_size)
+        # Numpy Array to store selected samples
+        # Those samples could be controlled only by the index,
+        # however keeping an allocated space in memory improves performance.
+        # (Here we have a tradeoff between memory space and computacional processing)
+        #self.memory_samples = np.empty(batch_size, dtype=type(self.memory))
+
 
         # Normalize the probability of being chosen for each one of the memory registers
         np.divide(self.memory['prob'], self.memory['prob'].sum(), out=self.p)
         # Choose "batch_size" sample index following the defined probability
-        self.memory_samples_idx = np.random.choice(self.buffer_size, self.batch_size, replace=False, p=self.p)
+        self.memory_samples_idx = np.random.choice(self.buffer_size, batch_size, replace=False, p=self.p)
         # Get the samples from memory
         self.memory_samples = self.memory[self.memory_samples_idx]
 

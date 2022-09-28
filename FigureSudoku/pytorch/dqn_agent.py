@@ -7,6 +7,9 @@ import torch
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.nn import MSELoss
+from torch.optim import RMSprop, SGD
+from torch.optim.adam import Adam
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from pytorch.dueling_model import DuelingQNetwork
 from pytorch.model import QNetwork
@@ -19,8 +22,8 @@ BUFFER_SIZE = int(1e5)  # replay buffer size
 BATCH_SIZE = 64         # batch size
 GAMMA = 0.99            # discount factor
 TAU = 1e-3              # for soft update of target parameters
-LR = 5e-4               # learning rate
-LR_DECAY = 0.9999       # multiplicative factor of learning rate decay
+LR = 5e-5               # learning rate
+#LR_DECAY = 0.9999       # multiplicative factor of learning rate decay
 UPDATE_EVERY = 4        # how often to update the network
 
 
@@ -62,16 +65,20 @@ class Agent:
             self.qnetwork_target = QNetwork(state_size, action_size, seed).to(self.device)
             self.qnetwork_target.eval()
 
-        self.optimizer = optim.Adam(self.qnetwork_local.parameters(), lr=LR)
+        self.optimizer = Adam(self.qnetwork_local.parameters(), lr=LR)
+        #self.optimizer = RMSprop(self.qnetwork_local.parameters(), lr=LR)
+        #self.optimizer = SGD(self.qnetwork_local.parameters(), lr=LR)
         #self.optimizer = RAdam(self.qnetwork_local.parameters(), lr=LR)
 
         #self.lr_scheduler = optim.lr_scheduler.ExponentialLR(self.optimizer, LR_DECAY)
+        #self.lr_scheduler = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=10, threshold=0.0001, threshold_mode='abs', cooldown=0, min_lr=0, verbose=True)
+        #self.lr_scheduler = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=10, threshold=0.0001, min_lr=0, verbose=True)
 
         # Replay memory
         if prioritized_replay:
-            self.memory = PrioritizedReplayBuffer(action_size, BUFFER_SIZE, BATCH_SIZE, seed, self.device, alpha=0.6, beta=0.4, beta_scheduler=1.0)
+            self.memory = PrioritizedReplayBuffer(action_size, BUFFER_SIZE, seed, self.device, alpha=0.6, beta=0.4, beta_scheduler=1.0)
         else:
-            self.memory = ReplayBuffer(action_size, BUFFER_SIZE, BATCH_SIZE, seed, self.device)
+            self.memory = ReplayBuffer(action_size, BUFFER_SIZE, seed, self.device)
 
         # Initialize time step (for updating every UPDATE_EVERY steps)
         self.t_step = 0
@@ -99,7 +106,7 @@ class Agent:
         if self.t_step == 0:
             # If enough samples are available in memory, get random subset and learn
             if len(self.memory) > BATCH_SIZE:
-                experiences = self.memory.sample()
+                experiences = self.memory.sample(BATCH_SIZE)
                 self.learn(experiences, GAMMA)
 
     def act(self, state, possible_actions, eps=0.):
@@ -179,7 +186,7 @@ class Agent:
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
-        #self.lr_scheduler.step()
+        #self.lr_scheduler.step(loss)
 
         # ------------------- update target network ------------------- #
         self.soft_update(self.qnetwork_local, self.qnetwork_target, TAU)
