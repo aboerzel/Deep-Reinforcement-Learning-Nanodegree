@@ -109,7 +109,7 @@ class Agent:
                 experiences = self.memory.sample(BATCH_SIZE)
                 self.learn(experiences, GAMMA)
 
-    def act(self, state, possible_actions, eps=0.):
+    def act(self, state, eps=0.):
         """Returns actions for given state as per current policy.
         
         Params
@@ -128,8 +128,7 @@ class Agent:
         if random.random() > eps:
             return np.argmax(action_values.cpu().data.numpy()) #.astype(int)
         else:
-            return random.choice(possible_actions)
-            #return random.choice(np.arange(self.action_size))
+            return random.choice(np.arange(self.action_size))
 
     def learn(self, experiences, gamma):
         """Update value parameters using given batch of experience tuples.

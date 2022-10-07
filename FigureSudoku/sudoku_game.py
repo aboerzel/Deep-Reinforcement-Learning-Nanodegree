@@ -6,8 +6,7 @@ import tkinter as tk
 import numpy as np
 
 from shapes import Geometry, Color
-#from train import train_sudoku
-from pytorch.train import train_sudoku
+from train import train_sudoku
 
 
 class GridCell:
