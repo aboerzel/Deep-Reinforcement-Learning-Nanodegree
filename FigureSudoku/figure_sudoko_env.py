@@ -8,7 +8,7 @@ from sudoku_generator import SudokuGenerator
 
 class Reward(Enum):
     FORBIDDEN = -10
-    CONTINUE = -1
+    CONTINUE = 0
     DONE = 10
 
 

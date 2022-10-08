@@ -22,7 +22,7 @@ class DDPGAgent:
         self.target_actor = self.build_actor(state_size, action_dims)
         self.target_critic = self.build_critic(state_size, len(action_dims))
 
-        self.ou_noise = OUActionNoise(mu=ou_noise[:, 0], sigma=ou_noise[:, 1], theta=ou_theta)
+        self.ou_noise = OUActionNoise(mean=ou_noise[:, 0], std_deviation=ou_noise[:, 1], theta=ou_theta)
 
         critic_optimizer = tf.keras.optimizers.Adam(critic_lr)
         actor_optimizer = tf.keras.optimizers.Adam(actor_lr)
@@ -34,7 +34,8 @@ class DDPGAgent:
 
         if train:
             # Adding noise to action
-            predicted_action += self.ou_noise()
+            noise = self.ou_noise()
+            predicted_action += noise
 
         # We make sure action is within bounds
         legal_action = np.clip(predicted_action, self.action_dims[:, 0], self.action_dims[:, 1]).astype(int)
@@ -50,13 +51,13 @@ class DDPGAgent:
 
     @staticmethod
     def build_actor(state_size, action_dims):
-        out_init = tf.random_uniform_initializer(minval=0.0, maxval=0.01)
+        out_init = tf.random_uniform_initializer(minval=0.0, maxval=0.03)
         #out_init = tf.random_uniform_initializer(minval=-0.0000001, maxval=0.0000001)
 
         inputs = Input(shape=(state_size,))
         hidden = Dense(256, activation="relu")(inputs)
         hidden = Dense(256, activation="relu")(hidden)
-        outputs = Dense(len(action_dims), activation="tanh", kernel_initializer=out_init)(hidden)
+        outputs = Dense(len(action_dims), activation="sigmoid", kernel_initializer=out_init)(hidden)
 
         action_output = outputs * action_dims[:, 1]  # upper bound
 
@@ -67,12 +68,15 @@ class DDPGAgent:
     def build_critic(state_size, action_size):
         # State as input
         state_input = Input(shape=state_size)
-        state_out = Dense(16, activation="relu")(state_input)
-        state_out = Dense(32, activation="relu")(state_out)
+        state_out = Dense(64, activation="relu")(state_input)
+        state_out = Dense(128, activation="relu")(state_out)
 
         # Action as input
         action_input = Input(shape=action_size)
-        action_out = Dense(32, activation="relu")(action_input)
+        action_out = Dense(16, activation="relu")(action_input)
+        action_out = Dense(32, activation="relu")(action_out)
+        action_out = Dense(64, activation="relu")(action_out)
+        action_out = Dense(128, activation="relu")(action_out)
 
         # Both are passed through separate layer before concatenating
         concat = Concatenate()([state_out, action_out])
@@ -112,7 +116,7 @@ class DDPGAgent:
         critic_model_file = os.path.normpath(os.path.join(output_dir, 'critic.h5'))
         target_actor_model_file = os.path.normpath(os.path.join(output_dir, 'target_actor.h5'))
         target_critic_model_file = os.path.normpath(os.path.join(output_dir, 'target_critic.h5'))
-        position_prediction_model_file = os.path.normpath(os.path.join(output_dir, 'axis_position_prediction_model.h5'))
+        # position_prediction_model_file = os.path.normpath(os.path.join(output_dir, 'axis_position_prediction_model.h5'))
 
         # Save trained weights
         self.actor_model.save_weights(actor_model_file)
@@ -122,5 +126,5 @@ class DDPGAgent:
         self.target_critic.save_weights(target_critic_model_file)
 
         # save as position prediction model
-        self.actor_model.save(position_prediction_model_file)
+        # self.actor_model.save(position_prediction_model_file)
 

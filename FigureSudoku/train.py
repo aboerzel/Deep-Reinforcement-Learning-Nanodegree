@@ -17,8 +17,7 @@ def train_sudoku(gui, stop):
     state_size = env.state_size
     action_dims = env.actions_dims
 
-    agent = DDPGAgent(state_size=state_size, action_dims=action_dims, batch_size=BATCH_SIZE,
-                      buffer_capacity=BUFFER_SIZE,
+    agent = DDPGAgent(state_size=state_size, action_dims=action_dims, batch_size=BATCH_SIZE, buffer_capacity=BUFFER_SIZE,
                       ou_noise=np.array(OU_NOISE), ou_theta=OU_THETA,
                       actor_lr=ACTOR_LR, critic_lr=CRITIC_LR, gamma=GAMMA, tau=TAU)
 
@@ -26,10 +25,7 @@ def train_sudoku(gui, stop):
 
     # hyperparameter
     start_episode = 1
-    eps_start = 1.0
-    eps_end = 0.01
-    eps_decay = 0.9995
-    start_level = 3
+    start_level = 1
 
     # score parameter
     warmup_episodes = start_episode + 2 * AVG_SCORE_WINDOW
@@ -37,7 +33,6 @@ def train_sudoku(gui, stop):
     avg_score = -99999
     best_avg_score = avg_score
 
-    eps = eps_start  # initialize epsilon
     level = start_level
 
     writer = SummaryWriter()
@@ -50,13 +45,13 @@ def train_sudoku(gui, stop):
         episode_score = 0
         for timestep in range(1, MAX_STEPS_PER_EPISODE + 1):
             action = agent.act(state, train=True)
-            print(f'action: {action[0]} {action[1]} {action[2]} {action[3]}', end='\r')
+            print(f'Episode {episode:08d} - Step {timestep:04d}\tAction: {action[0]} {action[1]} {action[2]} {action[3]}', end='\r')
             next_state, reward, done = env.step(np.array([action[0], action[1], Geometry(action[2]), Color(action[3])]))
             agent.step(state, action, reward, next_state, done)
             state = next_state
             episode_score += reward
             if done:
-                # print(f'Episode {episode:06d} - Step {timestep:06d}\tEpisode Score: {episode_score:.2f}\tdone!')
+                print(f'Episode {episode:08d} - Step {timestep:04d}\tEpisode Score: {episode_score:.2f}\tdone!')
                 break
 
         # average score over the last n epochs
@@ -65,14 +60,12 @@ def train_sudoku(gui, stop):
 
         writer.add_scalar("episode score", episode_score, episode)
         writer.add_scalar("avg score", avg_score, episode)
-        writer.add_scalar("epsilon", eps, episode)
 
         if episode % 10 == 0:
-            print(f'\rEpisode {episode:08d}\tAverage Score: {avg_score:.2f}\tEpsilon: {eps:.8f}')
+            print(f'\rEpisode {episode:08d}\tAverage Score: {avg_score:.2f}')
+            agent.save_model_weights(OUTPUT_DIR)
 
         # print(f'Episode {episode:06d}\tAvg Score: {avg_score:.2f}\tBest Avg Score: {best_avg_score:.2f}')
-
-        eps = max(eps_end, eps_decay * eps)  # decrease epsilon
 
         # save best weights
         if episode > warmup_episodes and avg_score > best_avg_score:
