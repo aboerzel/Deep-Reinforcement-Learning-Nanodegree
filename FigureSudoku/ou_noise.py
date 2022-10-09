@@ -11,12 +11,12 @@ import numpy as np
 
 
 class OUActionNoise:
-    def __init__(self, mean, std_deviation, theta=0.15, dt=1, x_initial=None):
+    def __init__(self, mean, std_deviation, theta=0.15, dt=1):
         self.theta = theta
         self.mean = mean
         self.std_dev = std_deviation
         self.dt = dt
-        self.x_initial = x_initial
+        self.x_prev = None
         self.reset()
 
     def __call__(self):
@@ -32,10 +32,7 @@ class OUActionNoise:
         return x
 
     def reset(self):
-        if self.x_initial is not None:
-            self.x_prev = self.x_initial
-        else:
-            self.x_prev = np.zeros_like(self.mean)
+        self.x_prev = np.zeros_like(self.mean)
 
 
 class OUActionNoise1:
