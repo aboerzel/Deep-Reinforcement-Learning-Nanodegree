@@ -38,7 +38,7 @@ class DDPGAgent:
             predicted_action += noise
 
         # We make sure action is within bounds
-        legal_action = np.clip(predicted_action, self.action_dims[:, 0], self.action_dims[:, 1]).astype(int)
+        legal_action = np.round(np.clip(predicted_action, self.action_dims[:, 0], self.action_dims[:, 1]), decimals=0).astype(int)
 
         return legal_action
 

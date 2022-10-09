@@ -11,7 +11,7 @@ import numpy as np
 
 
 class OUActionNoise:
-    def __init__(self, mean, std_deviation, theta=0.15, dt=1e-1, x_initial=None):
+    def __init__(self, mean, std_deviation, theta=0.15, dt=1, x_initial=None):
         self.theta = theta
         self.mean = mean
         self.std_dev = std_deviation
